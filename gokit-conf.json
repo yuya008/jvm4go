@@ -1,0 +1,11 @@
+{
+  "name": "github.com/yuya008/jvm4go",
+  "version": "v0.0.1",
+  "buildconfig": [
+    {
+      "name": "github.com/yuya008/jvm4go",
+      "debug": true
+    }
+  ],
+  "dependent": []
+}
