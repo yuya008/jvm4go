@@ -33,9 +33,10 @@ func parseArgs() error {
 	flagSet := flag.NewFlagSet(programName, flag.ExitOnError)
 	flagSet.Usage = usage
 	flagSet.StringVar(&vm.classPath, "-classpath", "", "")
-	if err := flagSet.Parse(os.Args); err != nil {
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
 		return err
 	}
+	log.Println(flagSet.Args())
 	return nil
 }
 
