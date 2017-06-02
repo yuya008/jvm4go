@@ -156,7 +156,7 @@ type FullFrame struct {
 }
 
 func newFullFrame(frameType uint8, io io.Reader, pool *ConstantPool) (*FullFrame, error) {
-	f := FullFrame{frameType:frameType}
+	f := &FullFrame{frameType:frameType}
 	if err := binary.Read(io, binary.BigEndian, &f.OffsetDelta); err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func newFullFrame(frameType uint8, io io.Reader, pool *ConstantPool) (*FullFrame
 	if err := binary.Read(io, binary.BigEndian, &numberOfLocals); err != nil {
 		return nil, err
 	}
-	for i := 0; i < len(numberOfLocals); i++ {
+	for i := 0; i < int(numberOfLocals); i++ {
 		vt, err := NewVerificationType(io, pool)
 		if err != nil {
 			return nil, err
@@ -174,7 +174,7 @@ func newFullFrame(frameType uint8, io io.Reader, pool *ConstantPool) (*FullFrame
 	if err := binary.Read(io, binary.BigEndian, &numberOfStackItems); err != nil {
 		return nil, err
 	}
-	for i := 0; i < len(numberOfStackItems); i++ {
+	for i := 0; i < int(numberOfStackItems); i++ {
 		vt, err := NewVerificationType(io, pool)
 		if err != nil {
 			return nil, err

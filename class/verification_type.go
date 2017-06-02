@@ -4,7 +4,6 @@ import (
 	"io"
 	"encoding/binary"
 	"errors"
-	"go/constant"
 )
 
 const (
@@ -38,7 +37,7 @@ func NewVerificationType(io io.Reader, pool *ConstantPool) (VerificationType, er
 	case ItemDouble:
 		return &DoubleVariable{}, nil
 	case ItemLong:
-		return LongVariable{}, nil
+		return &LongVariable{}, nil
 	case ItemNull:
 		return &NullVariable{}, nil
 	case ItemUninitializedThis:

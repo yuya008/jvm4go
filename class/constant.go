@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"unicode/utf16"
 	"math"
-	"reflect"
 )
 
 const (
@@ -47,210 +46,7 @@ var (
 type Constant interface {
 	Tag() int
 	Resolving(*ConstantPool) error
-}
-
-type ConstantPool struct {
-	pool []Constant
-}
-
-func NewConstantPool(reader io.Reader) (*ConstantPool, error) {
-	var constantCount uint16
-	if err := binary.Read(reader, binary.BigEndian, &constantCount); err != nil {
-		return nil, err
-	}
-	constPool := &ConstantPool{pool: make([]Constant, constantCount)}
-	var tag uint8
-	for i := 1; i < int(constantCount); i++ {
-		if err := binary.Read(reader, binary.BigEndian, &tag); err != nil {
-			return nil, err
-		}
-		constant, err := NewConstant(tag, reader)
-		if err != nil {
-			return nil, err
-		}
-		constPool.pool[i] = constant
-		if tag == Long || tag == Double {
-			i++
-		}
-	}
-	// Resolving
-	for i := 1; i < int(constantCount); i++ {
-		if c := constPool.pool[i]; c != nil {
-			if err := c.Resolving(constPool); err != nil {
-				return nil, err
-			}
-		}
-	}
-	return constPool, nil
-}
-
-func (cp *ConstantPool) Get(i uint16) (Constant, error) {
-	if int(i) < 0 || int(i) > len(cp.pool) - 1 {
-		return nil, fmt.Errorf("index is %d constant not found", i)
-	}
-	constant := cp.pool[i]
-	if constant == nil {
-		return nil, fmt.Errorf("index is %d constant not found", i)
-	}
-	return constant, nil
-}
-
-func (cp *ConstantPool) GetUTF8String(i uint16) (*ConstUTF8, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstUTF8); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstUTF8) failed")
-}
-
-func (cp *ConstantPool) GetFloat(i uint16) (*ConstFloat, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstFloat); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstFloat) failed")
-}
-
-func (cp *ConstantPool) GetInteger(i uint16) (*ConstInteger, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstInteger); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstInteger) failed")
-}
-
-func (cp *ConstantPool) GetLong(i uint16) (*ConstLong, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstLong); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstLong) failed")
-}
-
-func (cp *ConstantPool) GetDouble(i uint16) (*ConstDouble, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstDouble); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstDouble) failed")
-}
-
-func (cp *ConstantPool) GetFieldRef(i uint16) (*ConstFieldRef, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstFieldRef); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstFieldRef) failed")
-}
-
-func (cp *ConstantPool) GetString(i uint16) (*ConstString, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstString); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstString) failed")
-}
-
-func (cp *ConstantPool) GetClass(i uint16) (*ConstClass, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstClass); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstClass) failed")
-}
-
-func (cp *ConstantPool) GetMethodRef(i uint16) (*ConstMethodRef, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstMethodRef); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstMethodRef) failed")
-}
-
-func (cp *ConstantPool) GetInterfaceMethodRef(i uint16) (*ConstInterfaceMethodRef, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstInterfaceMethodRef); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstInterfaceMethodRef) failed")
-}
-
-func (cp *ConstantPool) GetNameAndType(i uint16) (*ConstNameAndType, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstNameAndType); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstNameAndType) failed")
-}
-
-func (cp *ConstantPool) GetMethodHandle(i uint16) (*ConstMethodHandle, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstMethodHandle); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstMethodHandle) failed")
-}
-
-func (cp *ConstantPool) GetMethodType(i uint16) (*ConstMethodType, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstMethodType); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstMethodType) failed")
-}
-
-func (cp *ConstantPool) GetInvokeDynamic(i uint16) (*ConstInvokeDynamic, error) {
-	constant, err := cp.Get(i)
-	if err != nil {
-		return nil, err
-	}
-	if val, ok := constant.(*ConstInvokeDynamic); ok {
-		return val, nil
-	}
-	return nil, errors.New("covert to constant.(*ConstInvokeDynamic) failed")
-}
-
-func (cp *ConstantPool) Length() int {
-	return len(cp.pool)
+	String() string
 }
 
 func NewConstant(tag uint8, reader io.Reader) (Constant, error) {
@@ -343,6 +139,10 @@ func (*ConstInteger) Resolving(pool *ConstantPool) error {
 	return nil
 }
 
+func (c *ConstInteger) String() string {
+	return fmt.Sprintf("ConstInteger -> %v", *c)
+}
+
 type ConstFloat struct {
 	Val float32
 }
@@ -365,6 +165,11 @@ func (cf *ConstFloat) Resolving(pool *ConstantPool) error {
 	return nil
 }
 
+func (cf *ConstFloat) String() string {
+	return fmt.Sprintf("ConstFloat -> %v", *cf)
+}
+
+
 type ConstLong struct {
 	Val int64
 }
@@ -383,6 +188,10 @@ func (*ConstLong) Tag() int {
 
 func (cl *ConstLong) Resolving(pool *ConstantPool) error {
 	return nil
+}
+
+func (cl *ConstLong) String() string {
+	return fmt.Sprintf("ConstLong -> %v", *cl)
 }
 
 type ConstDouble struct {
@@ -407,6 +216,10 @@ func (cl *ConstDouble) Resolving(pool *ConstantPool) error {
 	return nil
 }
 
+func (cl *ConstDouble) String() string {
+	return fmt.Sprintf("ConstDouble -> %v", *cl)
+}
+
 type ConstClass struct {
 	NameIndex uint16
 	Name *ConstUTF8
@@ -424,16 +237,16 @@ func (*ConstClass) Tag() int {
 	return Class
 }
 
+func (cc *ConstClass) String() string {
+	return fmt.Sprintf("ConstClass -> %v", *cc)
+}
+
 func (cc *ConstClass) Resolving(pool *ConstantPool) error {
-	constant, err := pool.Get(cc.NameIndex)
-	if err != nil {
+	var err error
+	if cc.Name, err = pool.GetUTF8String(cc.NameIndex); err != nil {
 		return err
 	}
-	if c, ok := constant.(*ConstUTF8); ok {
-		cc.Name = c
-		return nil
-	}
-	return ResolvingError
+	return nil
 }
 
 type ConstString struct {
@@ -454,15 +267,15 @@ func (ConstString) Tag() int {
 }
 
 func (cs *ConstString) Resolving(pool *ConstantPool) error {
-	constant, err := pool.Get(cs.UTF8StringIndex)
-	if err != nil {
+	var err error
+	if cs.UTF8String, err = pool.GetUTF8String(cs.UTF8StringIndex); err != nil {
 		return err
 	}
-	var ok bool
-	if cs.UTF8String, ok = constant.(*ConstUTF8); ok {
-		return nil
-	}
-	return ResolvingError
+	return nil
+}
+
+func (cs *ConstString) String() string {
+	return fmt.Sprintf("ConstString -> %v", *cs)
 }
 
 type ConstRef interface {
@@ -493,22 +306,12 @@ func (*ConstFieldRef) Tag() int {
 }
 
 func (cd *ConstFieldRef) Resolving(pool *ConstantPool) error {
-	var ok bool
-	constantClass, err := pool.Get(cd.ClassIndex)
-	if err != nil {
+	var err error
+	if cd.Class, err = pool.GetClass(cd.ClassIndex); err != nil {
 		return err
 	}
-	cd.Class, ok = constantClass.(*ConstClass)
-	if !ok {
-		return ResolvingError
-	}
-	constantNameAndType, err := pool.Get(cd.NameAndTypeIndex)
-	if err != nil {
+	if cd.NameAndType, err = pool.GetNameAndType(cd.NameAndTypeIndex); err != nil {
 		return err
-	}
-	cd.NameAndType, ok = constantNameAndType.(*ConstNameAndType)
-	if !ok {
-		return ResolvingError
 	}
 	return nil
 }
@@ -521,10 +324,18 @@ func (cd *ConstFieldRef) GetNameAndType() *ConstNameAndType {
 	return cd.NameAndType
 }
 
+func (cd *ConstFieldRef) String() string {
+	return fmt.Sprintf("ConstFieldRef -> %v", *cd)
+}
+
 type ConstMethodRef struct{*ConstFieldRef}
 
 func (*ConstMethodRef) Tag() int {
 	return MethodRef
+}
+
+func (cd *ConstMethodRef) String() string {
+	return fmt.Sprintf("ConstMethodRef -> %v", *cd)
 }
 
 func NewConstMethodRef(io io.Reader) (*ConstMethodRef, error) {
@@ -547,6 +358,10 @@ func NewConstInterfaceMethodRef(io io.Reader) (*ConstInterfaceMethodRef, error) 
 
 func (*ConstInterfaceMethodRef) Tag() int {
 	return InterfaceMethodRef
+}
+
+func (cd *ConstInterfaceMethodRef) String() string {
+	return fmt.Sprintf("ConstInterfaceMethodRef -> %v", *cd)
 }
 
 type ConstNameAndType struct {
@@ -572,25 +387,18 @@ func (*ConstNameAndType) Tag() int {
 }
 
 func (cnat *ConstNameAndType) Resolving(pool *ConstantPool) error {
-	constant, err := pool.Get(cnat.NameIndex)
-	if err != nil {
+	var err error
+	if cnat.Name, err = pool.GetUTF8String(cnat.NameIndex); err != nil {
 		return err
 	}
-	c, ok := constant.(*ConstUTF8)
-	if !ok {
-		return ResolvingError
-	}
-	cnat.Name = c
-	constant, err = pool.Get(cnat.DescriptorIndex)
-	if err != nil {
+	if cnat.Descriptor, err = pool.GetUTF8String(cnat.DescriptorIndex); err != nil {
 		return err
 	}
-	c, ok = constant.(*ConstUTF8)
-	if !ok {
-		return ResolvingError
-	}
-	cnat.Descriptor = c
 	return nil
+}
+
+func (cnat *ConstNameAndType) String() string {
+	return fmt.Sprintf("ConstNameAndType -> %v", *cnat)
 }
 
 type ConstMethodHandle struct {
@@ -622,12 +430,17 @@ func (cd *ConstMethodHandle) Resolving(pool *ConstantPool) error {
 	if err != nil {
 		return err
 	}
+
 	constRef, ok := constant.(ConstRef)
 	if !ok {
 		return ResolvingError
 	}
 	cd.Ref = constRef
 	return nil
+}
+
+func (cd *ConstMethodHandle) String() string {
+	return fmt.Sprintf("ConstMethodHandle -> %v", *cd)
 }
 
 type ConstMethodType struct {
@@ -647,16 +460,15 @@ func (ConstMethodType) Tag() int {
 	return MethodType
 }
 
+func (cmt *ConstMethodType) String() string {
+	return fmt.Sprintf("ConstMethodType -> %v", *cmt)
+}
+
 func (cmt *ConstMethodType) Resolving(pool *ConstantPool) error {
-	constant, err := pool.Get(cmt.DescriptorIndex)
-	if err != nil {
+	var err error
+	if cmt.Descriptor, err = pool.GetUTF8String(cmt.DescriptorIndex); err != nil {
 		return err
 	}
-	c, ok := constant.(*ConstUTF8)
-	if !ok {
-		return ResolvingError
-	}
-	cmt.Descriptor = c
 	return nil
 }
 
@@ -678,6 +490,10 @@ func NewConstInvokeDynamic(io io.Reader) (*ConstInvokeDynamic, error) {
 
 func (*ConstInvokeDynamic) Tag() int {
 	return InvokeDynamic
+}
+
+func (cid *ConstInvokeDynamic) String() string {
+	return fmt.Sprintf("ConstInvokeDynamic -> %v", *cid)
 }
 
 func (cid *ConstInvokeDynamic) Resolving(pool *ConstantPool) error {

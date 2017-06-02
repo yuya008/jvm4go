@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"go/constant"
 )
 
 type ClassFile struct {
@@ -79,6 +78,12 @@ func NewClassFile(reader io.Reader) (*ClassFile, error) {
 		return nil, err
 	}
 	if err = classFile.readFields(); err != nil {
+		return nil, err
+	}
+	if err = classFile.readMethods(); err != nil {
+		return nil, err
+	}
+	if err = classFile.readAttrs(); err != nil {
 		return nil, err
 	}
 	return classFile, nil
@@ -165,7 +170,7 @@ func (classfile *ClassFile) readFields() error {
 	if err := binary.Read(classfile.reader, binary.BigEndian, &fieldsCount); err != nil {
 		return err
 	}
-	for i := 0; i < fieldsCount; i++ {
+	for i := 0; i < int(fieldsCount); i++ {
 		field, err := classfile.readField()
 		if err != nil {
 			return err
@@ -177,7 +182,7 @@ func (classfile *ClassFile) readFields() error {
 
 func (classfile *ClassFile) readField() (*Field, error) {
 	field := &Field{}
-	if err := binary.Read(classfile.reader, binary.BigEndian, field.AccessFlags); err != nil {
+	if err := binary.Read(classfile.reader, binary.BigEndian, &field.AccessFlags); err != nil {
 		return nil, err
 	}
 	var nameIndex, descriptorIndex uint16
@@ -199,7 +204,7 @@ func (classfile *ClassFile) readField() (*Field, error) {
 		return nil, err
 	}
 	field.Attrs = make([]Attr, attrCount)
-	for i := 0; i < attrCount; i++ {
+	for i := 0; i < int(attrCount); i++ {
 		attr, err := ReadAttr(classfile.reader, classfile.ConstantPool)
 		if err != nil {
 			return nil, err
@@ -207,4 +212,34 @@ func (classfile *ClassFile) readField() (*Field, error) {
 		field.Attrs[i] = attr
 	}
 	return field, nil
+}
+
+func (classfile *ClassFile) readMethods() error {
+	var methodCount uint16
+	if err := binary.Read(classfile.reader, binary.BigEndian, &methodCount); err != nil {
+		return err
+	}
+	for i := 0; i < int(methodCount); i++ {
+		method, err := NewMethod(classfile.reader, classfile.ConstantPool)
+		if err != nil {
+			return err
+		}
+		classfile.Methods = append(classfile.Methods, method)
+	}
+	return nil
+}
+
+func (classfile *ClassFile) readAttrs() error {
+	var attrCount uint16
+	if err := binary.Read(classfile.reader, binary.BigEndian, &attrCount); err != nil {
+		return err
+	}
+	for i := 0; i < int(attrCount); i++ {
+		attr, err := ReadAttr(classfile.reader, classfile.ConstantPool)
+		if err != nil {
+			return err
+		}
+		classfile.Attrs = append(classfile.Attrs, attr)
+	}
+	return nil
 }
